@@ -5,8 +5,8 @@
 
 namespace dgame {
 
-GameObject::GameObject(Application& contextHandle, const glm::vec2& positionOnMap, const glm::ivec2& size, const std::string& sprite,
-                       Object::TYPE type)
+GameObject::GameObject(Application& contextHandle, const glm::vec2& positionOnMap,
+                       const glm::ivec2& size, const std::string& sprite, Object::TYPE type)
    : Object(type), m_appHandle(contextHandle)
 {
    m_currentState.m_globalPosition = m_appHandle.GetLevel().GetGlobalVec(positionOnMap);
@@ -14,11 +14,14 @@ GameObject::GameObject(Application& contextHandle, const glm::vec2& positionOnMa
    m_currentState.m_visible = true;
    m_collision = m_sprite.SetSpriteTextured(m_currentState.m_globalPosition, size, sprite);
    m_currentState.m_centeredGlobalPosition = m_sprite.GetPosition();
-   m_currentState.m_centeredLocalPosition = m_appHandle.GetLevel().GetLocalVec(m_currentState.m_centeredGlobalPosition);
+   m_currentState.m_centeredLocalPosition =
+      m_appHandle.GetLevel().GetLocalVec(m_currentState.m_centeredGlobalPosition);
    m_type = type;
 
    m_id = s_currentID;
    ++s_currentID;
+
+   UpdateCollision();
 }
 
 bool
@@ -33,7 +36,8 @@ GameObject::CheckIfCollidedScreenPosion(const glm::vec2& screenPosition) const
 
    const auto transformed0 = camera.GetViewMatrix() * glm::vec4(boundingRectangle[0], 0.0f, 1.0f);
    const auto transformed1 = camera.GetViewMatrix() * glm::vec4(boundingRectangle[1], 0.0f, 1.0f);
-   //const auto transformed2 = camera.GetViewMatrix() * glm::vec4(boundingRectangle[2], 0.0f, 1.0f);
+   // const auto transformed2 = camera.GetViewMatrix() * glm::vec4(boundingRectangle[2],
+   // 0.0f, 1.0f);
    const auto transformed3 = camera.GetViewMatrix() * glm::vec4(boundingRectangle[3], 0.0f, 1.0f);
 
    const auto minX = transformed1.x;
@@ -41,10 +45,12 @@ GameObject::CheckIfCollidedScreenPosion(const glm::vec2& screenPosition) const
    const auto minY = transformed3.y;
    const auto maxY = transformed0.y;
 
-   const auto globalPosition = camera.GetViewMatrix() * glm::vec4(m_appHandle.ScreenToGlobal(screenPosition), 0.0f, 1.0f);
+   const auto globalPosition =
+      camera.GetViewMatrix() * glm::vec4(m_appHandle.ScreenToGlobal(screenPosition), 0.0f, 1.0f);
 
    // If 'screenPosition' is inside 'object' sprite (rectangle)
-   if (globalPosition.x >= minX && globalPosition.x <= maxX && globalPosition.y <= maxY && globalPosition.y >= minY)
+   if (globalPosition.x >= minX && globalPosition.x <= maxX && globalPosition.y <= maxY
+       && globalPosition.y >= minY)
    {
       collided = true;
    }
@@ -68,6 +74,9 @@ void
 GameObject::SetSize(const glm::vec2& newSize)
 {
    m_sprite.SetSize(newSize);
+
+   m_currentState.m_occupiedNodes = m_appHandle.GetLevel().GameObjectMoved(
+      m_sprite.GetTransformedRectangle(), m_currentState.m_occupiedNodes);
 }
 
 void
@@ -153,7 +162,8 @@ GameObject::CreateSprite(const glm::vec2& position, const glm::ivec2& size)
 }
 
 void
-GameObject::CreateSpriteTextured(const glm::vec2& position, const glm::ivec2& size, const std::string& fileName)
+GameObject::CreateSpriteTextured(const glm::vec2& position, const glm::ivec2& size,
+                                 const std::string& fileName)
 {
    m_collision = m_sprite.SetSpriteTextured(position, size, fileName);
    m_currentState.m_globalPosition = m_sprite.GetPosition();
@@ -163,6 +173,18 @@ void
 GameObject::SetHasCollision(bool hasCollision)
 {
    m_hasCollision = hasCollision;
+
+   if (!m_hasCollision)
+   {
+      for (auto& node : m_currentState.m_occupiedNodes)
+      {
+         m_appHandle.GetLevel().GetPathfinder().SetNodeFreed(node);
+      }
+   }
+   else
+   {
+      UpdateCollision();
+   }
 }
 
 bool
@@ -184,6 +206,22 @@ GameObject::GetName() const
 }
 
 void
+GameObject::UpdateCollision()
+{
+   if (m_hasCollision)
+   {
+      m_currentState.m_occupiedNodes = m_appHandle.GetLevel().GameObjectMoved(
+         m_sprite.GetTransformedRectangle(), m_currentState.m_occupiedNodes);
+   }
+}
+
+std::vector< std::pair< int32_t, int32_t > >
+GameObject::GetOccupiedNodes() const
+{
+   return m_currentState.m_occupiedNodes;
+}
+
+void
 GameObject::Move(const glm::vec2& moveBy, bool isCameraMovement)
 {
    m_sprite.Translate(moveBy);
@@ -195,18 +233,24 @@ GameObject::Move(const glm::vec2& moveBy, bool isCameraMovement)
       m_currentState.m_localPosition += moveBy;
       m_currentState.m_centeredLocalPosition += moveBy;
    }
+
+   UpdateCollision();
 }
 
 void
 GameObject::Scale(const glm::vec2& scaleVal, bool cumulative)
 {
    cumulative ? m_sprite.ScaleCumulative(scaleVal) : m_sprite.Scale(scaleVal);
+
+   UpdateCollision();
 }
 
 void
 GameObject::Rotate(float angle, bool cumulative)
 {
    cumulative ? m_sprite.RotateCumulative(angle) : m_sprite.Rotate(angle);
+
+   UpdateCollision();
 }
 
 void

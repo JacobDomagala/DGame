@@ -17,10 +17,6 @@ class Game;
 class Level
 {
  public:
-   Level() = default;
-
-   ~Level() = default;
-
    std::shared_ptr< GameObject >
    AddGameObject(GameObject::TYPE objectType);
 
@@ -32,8 +28,18 @@ class Level
    glm::vec2
    GetGlobalVec(const glm::vec2& local) const;
 
+   std::vector< std::pair< int32_t, int32_t > >
+   GetTilesFromBoundingBox(const std::array<glm::vec2, 4>& box) const;
+
+   std::pair<int32_t, int32_t>
+   GetTileFromPosition(const glm::vec2& local) const;
+
    void
    MoveObjs(const glm::vec2& moveBy, bool isCameraMovement = true);
+
+   std::vector< std::pair< int32_t, int32_t > >
+   GameObjectMoved(const std::array< glm::vec2, 4 >& box,
+                   const std::vector< std::pair< int32_t, int32_t > >& currentTiles);
 
    void
    Create(Application* context, const glm::ivec2& size);
@@ -56,10 +62,17 @@ class Level
    LoadShaders(const std::string& shaderName);
 
    void
-   AddGameObject(Game& game, const glm::vec2& pos, const glm::ivec2& size, const std::string& sprite);
+   AddGameObject(Game& game, const glm::vec2& pos, const glm::ivec2& size,
+                 const std::string& sprite);
 
    void
    DeleteObject(std::shared_ptr< Object > deletedObject);
+
+   void
+   DeleteObject(Object::ID deletedObject);
+
+   Object&
+   GetObjectRef(Object::ID object);
 
    void
    Move(const glm::vec2& moveBy);
@@ -76,8 +89,18 @@ class Level
    void
    Render();
 
+   // Renders only game objects
+   void
+   RenderGameObjects();
+
+   bool
+   IsInLevelBoundaries(const glm::vec2& position) const;
+
    bool
    CheckCollision(const glm::ivec2& localPos, const Player& player);
+
+   bool
+   CheckCollisionAlongTheLine(const glm::vec2& fromPos, const glm::vec2& toPos);
 
    void
    LockCamera()
@@ -115,7 +138,7 @@ class Level
    PathFinder&
    GetPathfinder()
    {
-      return m_pathinder;
+      return m_pathFinder;
    }
 
    std::shared_ptr< Player >
@@ -148,6 +171,12 @@ class Level
       return m_collision;
    }
 
+   uint32_t
+   GetTileSize() const
+   {
+      return m_tileWidth;
+   }
+
  private:
    Logger m_logger = Logger("Level");
 
@@ -161,11 +190,9 @@ class Level
    bool m_locked = false;
 
    glm::ivec2 m_levelSize = {0, 0};
+   uint32_t m_tileWidth = 128;
    std::vector< std::shared_ptr< GameObject > > m_objects;
-   PathFinder m_pathinder;
-
-   // Tile handling stuff (deprecated)
-   std::unordered_map< std::string, Texture > m_textures;
+   PathFinder m_pathFinder;
 };
 
 } // namespace dgame

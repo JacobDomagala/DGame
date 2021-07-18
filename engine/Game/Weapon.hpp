@@ -16,8 +16,14 @@ class Weapon
    const std::string m_name;
    float m_reloadTime;
 
-   Weapon(int32_t range, int32_t dmg, int32_t ammoNum, bool hasAmmo, const std::string& name, float reloadTime)
-      : m_range(range), m_dmg(dmg), m_ammoNum(ammoNum), m_hasAmmo(hasAmmo), m_name(name), m_reloadTime(reloadTime)
+   Weapon(int32_t range, int32_t dmg, int32_t ammoNum, bool hasAmmo, const std::string& name,
+          float reloadTime)
+      : m_range(range),
+        m_dmg(dmg),
+        m_ammoNum(ammoNum),
+        m_hasAmmo(hasAmmo),
+        m_name(name),
+        m_reloadTime(reloadTime)
    {
    }
 
@@ -61,7 +67,7 @@ class Weapon
 class SniperRifle : public Weapon
 {
  public:
-   SniperRifle() : Weapon(3000, 80, 10, true, {"sniper rifle"}, 1.0f)
+   SniperRifle() : Weapon(1000, 80, 10, true, {"sniper rifle"}, 1.0f)
    {
    }
    ~SniperRifle() override = default;
@@ -75,7 +81,7 @@ class SniperRifle : public Weapon
 class Glock : public Weapon
 {
  public:
-   Glock() : Weapon(400, 10, 20, true, {"glock"}, 0.3f)
+   Glock() : Weapon(300, 10, 20, true, {"glock"}, 0.3f)
    {
    }
    ~Glock() override = default;
